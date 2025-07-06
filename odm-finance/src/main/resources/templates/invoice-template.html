@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Facture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+        }
+        .company-info {
+            text-align: left;
+        }
+        .invoice-info {
+            text-align: right;
+        }
+        .client-info {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        .totals {
+            float: right;
+            width: 300px;
+        }
+        .totals table {
+            margin-bottom: 0;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-info">
+            <h1>ODM Finance</h1>
+            <p>123 Avenue des Entreprises<br/>
+               75000 Paris, France<br/>
+               Tél: +33 1 23 45 67 89<br/>
+               Email: contact@odm-finance.com</p>
+        </div>
+        <div class="invoice-info">
+            <h2>FACTURE</h2>
+            <p><strong>N°:</strong> <span th:text="${invoice.number}">INV-2024-001</span></p>
+            <p><strong>Date d'émission:</strong> <span th:text="${#temporals.format(invoice.issueDate, 'dd/MM/yyyy')}">01/01/2024</span></p>
+            <p><strong>Date d'échéance:</strong> <span th:text="${#temporals.format(invoice.dueDate, 'dd/MM/yyyy')}">31/01/2024</span></p>
+        </div>
+    </div>
+
+    <div class="client-info">
+        <h3>Facturé à:</h3>
+        <p><strong th:text="${client.name}">Nom du Client</strong></p>
+        <p th:text="${client.address}">Adresse du client</p>
+        <p>Email: <span th:text="${client.email}">email@client.com</span></p>
+        <p>Tél: <span th:text="${client.phone}">01 23 45 67 89</span></p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Quantité</th>
+                <th>Prix unitaire</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="item : ${invoice.items}">
+                <td th:text="${item.description}">Description du produit</td>
+                <td th:text="${item.quantity}">1</td>
+                <td th:text="${#numbers.formatDecimal(item.unitPrice, 1, 2)} + ' €'">100.00 €</td>
+                <td th:text="${#numbers.formatDecimal(item.total, 1, 2)} + ' €'">100.00 €</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <table>
+            <tr>
+                <td>Sous-total:</td>
+                <td th:text="${#numbers.formatDecimal(invoice.subtotal, 1, 2)} + ' €'">0.00 €</td>
+            </tr>
+            <tr>
+                <td>TVA (20%):</td>
+                <td th:text="${#numbers.formatDecimal(invoice.taxAmount, 1, 2)} + ' €'">0.00 €</td>
+            </tr>
+            <tr class="total-row">
+                <td><strong>Total:</strong></td>
+                <td><strong th:text="${#numbers.formatDecimal(invoice.total, 1, 2)} + ' €'">0.00 €</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        <p>Merci pour votre confiance !</p>
+        <p>Conditions de paiement: Net 30 jours</p>
+    </div>
+</body>
+</html>
