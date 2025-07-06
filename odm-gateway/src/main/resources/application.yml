@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              lower-case-service-id: true
+              enabled: true
+          routes:
+            - id: odm-auth
+              uri: http://odm-auth:8090
+              predicates:
+                - Path= /auth/**,/test/**,
+              filters:
+                - JwtAuthenticationFilter
+            - id: odm-finance
+              uri: http://odm-finance:8091
+              predicates:
+                - Path= /api/produits/**,/api/payments/**,/api/pdf/**,/api/stripe/**
+              filters:
+                - JwtAuthenticationFilter
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web.server.adapter: DEBUG
+    org.springframework.web.reactive: DEBUG
+#JWT
+jwt:
+  secret: Emh/eYc9/h2cvrr1/i/+QsufTPEgtwi7sW9TxOnfs1g=

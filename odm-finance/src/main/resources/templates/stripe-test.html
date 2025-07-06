@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Paiement Stripe - ODM Finance</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .card-element { padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin: 10px 0; }
+        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .btn:disabled { background: #ccc; }
+        .btn-secondary { background: #6c757d; }
+        .result { margin: 20px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .config-section { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+<h1>Test Paiement Stripe - ODM Finance</h1>
+
+<!-- Section de test de configuration -->
+<div class="config-section">
+    <h3>Test de Configuration</h3>
+    <button class="btn btn-secondary" onclick="testConfig()">Tester la Configuration</button>
+    <button class="btn btn-secondary" onclick="testStripeConfig()">Tester Stripe</button>
+    <div id="config-result"></div>
+</div>
+
+<h3>Produits à acheter :</h3>
+<div>
+    <p>Ordinateur portable : 999.99€ x 1</p>
+    <p>Souris sans fil : 29.99€ x 2</p>
+    <p><strong>Total TTC : 1079.97€</strong></p>
+</div>
+
+<form id="payment-form">
+    <h3>Informations client :</h3>
+    <input type="text" id="client-name" placeholder="Nom complet" required style="width: 100%; padding: 10px; margin: 5px 0;" value="Jean Dupont">
+    <input type="email" id="client-email" placeholder="Email" required style="width: 100%; padding: 10px; margin: 5px 0;" value="jean.dupont@test.com">
+
+    <h3>Informations de paiement :</h3>
+    <div id="card-element" class="card-element">
+        <!-- Stripe Elements va insérer les champs de carte ici -->
+    </div>
+
+    <button id="submit-button" class="btn">Payer 1079.97€</button>
+</form>
+
+<div id="card-error" role="alert"></div>
+<div id="result"></div>
+
+<h3>Cartes de test Stripe :</h3>
+<button class="btn btn-secondary" onclick="fillTestCard('4242424242424242')">Visa Succès</button>
+<button class="btn btn-secondary" onclick="fillTestCard('4000000000000002')">Visa Échec</button>
+<button class="btn btn-secondary" onclick="getTestCards()">Voir toutes les cartes</button>
+
+<div id="test-cards-result"></div>
+
+<script>
+    let stripe, elements, cardElement;
+
+    // Initialiser Stripe après avoir récupéré la clé publique
+    async function initStripe() {
+        try {
+            // Vous devez remplacer cette clé par votre vraie clé publique
+            stripe = Stripe('pk_test_51O...'); // REMPLACEZ PAR VOTRE CLÉ PUBLIQUE
+            elements = stripe.elements();
+            cardElement = elements.create('card');
+            cardElement.mount('#card-element');
+
+            // Gérer les erreurs de saisie de carte
+            cardElement.on('change', ({ error }) => {
+                const displayError = document.getElementById('card-error');
+                if (error) {
+                    displayError.textContent = error.message;
+                } else {
+                    displayError.textContent = '';
+                }
+            });
+
+            showResult('Stripe initialisé avec succès', 'success');
+        } catch (error) {
+            showResult('Erreur d\'initialisation Stripe: ' + error.message, 'error');
+        }
+    }
+
+    // Tester la configuration générale
+    async function testConfig() {
+        try {
+            const response = await fetch('/api/config/test');
+            const data = await response.json();
+
+            document.getElementById('config-result').innerHTML =
+                `<div class="result ${data.success ? 'success' : 'error'}">
+                        <strong>Configuration:</strong><br>
+                        ${JSON.stringify(data.data, null, 2)}
+                    </div>`;
+        } catch (error) {
+            document.getElementById('config-result').innerHTML =
+                `<div class="result error">Erreur: ${error.message}</div>`;
+        }
+    }
+
+    // Tester la configuration Stripe
+    async function testStripeConfig() {
+        try {
+            const response = await fetch('/api/stripe/test-config');
+            const data = await response.json();
+
+            document.getElementById('config-result').innerHTML =
+                `<div class="result ${data.success ? 'success' : 'error'}">
+                        <strong>Stripe:</strong> ${data.message}<br>
+                        ${data.data ? JSON.stringify(data.data, null, 2) : ''}
+                    </div>`;
+        } catch (error) {
+            document.getElementById('config-result').innerHTML =
+                `<div class="result error">Erreur Stripe: ${error.message}</div>`;
+        }
+    }
+
+    // Récupérer les cartes de test
+    async function getTestCards() {
+        try {
+            const response = await fetch('/api/stripe/test-cards');
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('test-cards-result').innerHTML =
+                    `<div class="result info">
+                            <strong>Cartes de test disponibles:</strong><br>
+                            ${JSON.stringify(data.data, null, 2)}
+                        </div>`;
+            }
+        } catch (error) {
+            showResult('Erreur lors de la récupération des cartes de test: ' + error.message, 'error');
+        }
+    }
+
+    // Remplir automatiquement une carte de test
+    function fillTestCard(cardNumber) {
+        if (cardElement) {
+            cardElement.update({
+                value: {
+                    number: cardNumber,
+                    exp_month: 12,
+                    exp_year: 2030,
+                    cvc: '123'
+                }
+            });
+            showResult(`Carte de test ${cardNumber} sélectionnée`, 'info');
+        }
+    }
+
+    // Traitement du paiement
+    document.getElementById('payment-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        if (!stripe || !cardElement) {
+            showResult('Stripe n\'est pas encore initialisé', 'error');
+            return;
+        }
+
+        const submitButton = document.getElementById('submit-button');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Traitement...';
+
+        const clientName = document.getElementById('client-name').value;
+        const clientEmail = document.getElementById('client-email').value;
+
+        try {
+            // 1. Créer un PaymentIntent
+            const intentResponse = await fetch('/api/stripe/create-payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: 107997,
+                    currency: 'eur',
+                    clientName: clientName,
+                    clientEmail: clientEmail,
+                    products: [
+                        { nom: 'Ordinateur portable', prix: 999.99, quantite: 1 },
+                        { nom: 'Souris sans fil', prix: 29.99, quantite: 2 }
+                    ],
+                    description: 'Test de paiement ODM Finance'
+                })
+            });
+
+            const intentData = await intentResponse.json();
+
+            if (!intentData.success) {
+                throw new Error(intentData.message);
+            }
+
+            const { clientSecret } = intentData.data;
+
+            // 2. Confirmer le paiement avec Stripe
+            const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: cardElement,
+                    billing_details: {
+                        name: clientName,
+                        email: clientEmail,
+                    },
+                }
+            });
+
+            if (error) {
+                showResult('Erreur de paiement : ' + error.message, 'error');
+            } else if (paymentIntent.status === 'succeeded') {
+                // 3. Confirmer côté serveur
+                const confirmResponse = await fetch('/api/stripe/confirm-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        paymentIntentId: paymentIntent.id
+                    })
+                });
+
+                const confirmData = await confirmResponse.json();
+
+                if (confirmData.success) {
+                    showResult('✅ Paiement réussi ! Email de confirmation envoyé.', 'success');
+                } else {
+                    showResult('Paiement réussi mais erreur d\'email : ' + confirmData.message, 'error');
+                }
+            }
+        } catch (error) {
+            showResult('❌ Erreur : ' + error.message, 'error');
+        }
+
+        submitButton.disabled = false;
+        submitButton.textContent = 'Payer 1079.97€';
+    });
+
+    function showResult(message, type) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
+    }
+
+    // Initialiser Stripe au chargement de la page
+    initStripe();
+</script>
+</body>
+</html>
